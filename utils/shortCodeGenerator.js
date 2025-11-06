@@ -1,4 +1,4 @@
-/**
+/* 
  * Generates a random 6-character alphanumeric short code
  * Example output: "aB3xY9"
  */

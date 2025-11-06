@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { generateShortCode } = require('../utils/shortCodeGenerator');
+const { fetchLinkPreview } = require('../utils/LinkPreview');
 
 /**
  * Shorten a URL
@@ -63,10 +64,12 @@ async function shortenUrl(req, res) {
       }
     }
 
+    const metadata = await fetchLinkPreview(url);
+
     // Store in database
     const result = await pool.query(
-      'INSERT INTO urls (original_url, short_code) VALUES ($1, $2) RETURNING *',
-      [url, shortCode]
+      'INSERT INTO urls (original_url, short_code, title, description, image_url) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [url, shortCode, metadata.title, metadata.description, metadata.imageUrl]
     );
 
     const savedUrl = result.rows[0];
@@ -78,6 +81,11 @@ async function shortenUrl(req, res) {
       shortUrl: `http://localhost:3000/${savedUrl.short_code}`,
       createdAt: savedUrl.created_at,
       isCustomAlias: !!customAlias,  // Let user know if custom alias was used
+      preview: {
+        title: savedUrl.title,
+        description: savedUrl.description,
+        imageUrl: savedUrl.imageUrl
+      }
     });
 
   } catch (error) {
@@ -131,9 +139,14 @@ async function getStats(req,res){
       originalUrl: urlData.original_url,
       shortCode: urlData.short_code,
       shortUrl: 'http://localhost:3000/' + urlData.short_code,
-      createdAt: urlData.created_at,
       clickCount: urlData.click_count,
+      createdAt: urlData.created_at,
       lastClickedAt: urlData.last_clicked_at || 'Never',
+      preview: {                                    
+        title: urlData.title,
+        description: urlData.description,
+        imageUrl: urlData.image_url
+    }
     });
   }
   catch(error){
